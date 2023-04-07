@@ -1,0 +1,1 @@
+from oracledb_clean_schema import lambda_handler

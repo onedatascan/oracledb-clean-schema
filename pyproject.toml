@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oracledb_clean_schema"
+description = "Drop all objects in Oracle schema"
+license = {text = "apache-2.0"}
+requires-python = ">=3.11"
+version = "0.0.1"
+dependencies = [
+    "oracledb == 1.2.0",
+    "python-dotenv == 0.21.0",
+    "awslambdaric", "aws_lambda_powertools", "boto3"
+]
+
+[project.scripts]
+oracledb-clean-schema = "oracledb_clean_schema.__main__:main"
+
+[project.optional-dependencies]
+lambda = ["awslambdaric", "aws_lambda_powertools", "boto3"]
+
+[tool.black]
+target-version = ['py311']
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]

@@ -1,0 +1,50 @@
+
+# Virtual env and dot env files
+.venv
+.env
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+/build/
+/dist/
+*.whl
+*.egg
+*.eggs
+*.egg-info/
+MANIFEST
+
+# For IntelliJ IDEs (basically PyCharm)
+.idea/
+
+# For Visual Studio Code
+.vscode/
+
+# Scratch Pad for experiments
+.scratch/
+
+# Dev deploy
+deploy.sh
+
+# Mac
+.DS_Store
+
+# Dupfiles
+tests/data
+
+# Dev scratch file
+scratch.py
+
+# Flake8
+.flake8
+
+# Terraform
+.terraform
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+*.plan

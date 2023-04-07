@@ -1,0 +1,15 @@
+services:
+  database:
+    image: container-registry.oracle.com/database/enterprise:19.3.0.0
+    container_name: clean_db
+    env_file:
+      - .env
+    volumes:
+      - ./oradata:/opt/oracle/oradata                     # persistent oracle database data
+      - ./oradata/admin:/opt/oracle/admin                 # persistent oracle admin directory (datapump dir. etc..)
+      - ./scripts/db/setup:/opt/oracle/scripts/setup      # scripts run once on database creation
+      - ./scripts/db/startup:/opt/oracle/scripts/startup  # scripts run every db startup
+    ports:
+      - 1521:1521
+      - 8080:8080
+      - 5500:5500
