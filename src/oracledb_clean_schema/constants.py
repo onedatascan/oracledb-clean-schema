@@ -16,7 +16,7 @@ and not exists (
         and atic.owner = ao.owner
         and ao.object_type = 'SEQUENCE'
     )
-and ao.owner = upper(:owner)
+and ao.owner = :owner
 order by ao.object_name
 """
 
@@ -26,26 +26,38 @@ select constraint_name,
        table_name
 from all_constraints
 where constraint_type = 'R'
-and owner = upper(:owner)
+and owner = :owner
 """
 
 SQL_GET_CREDS = """
 select owner,
        credential_name
 FROM all_credentials
-where owner = upper(:owner)
+where owner = :owner
 """
 
 SQL_GET_USER_OBJ_COUNT = """
 select count(*)
 from all_objects
-where owner = upper(:owner)
+where owner = :owner
+"""
+
+SQL_GET_ORA_MAINTAINED_SCHEMAS = """
+select username
+from dba_users
+where oracle_maintained = 'Y'
+"""
+
+SQL_GET_NON_UPPERCASE_SCHEMAS = """
+select username
+from dba_users
+where upper(username) != username
 """
 
 SQL_GET_SCHEMA_TABLESPACES = """
 select distinct tablespace_name
 from dba_segments
-where owner = upper(:owner)
+where owner = :owner
 """
 
 SQL_PURGE_RECYCLE_BIN = "purge tablespace {tablespace} USER {owner}"
@@ -55,12 +67,12 @@ SQL_PURGE_USER_RECYCLE_BIN = "purge recyclebin"
 SQL_GET_JOBS = """
 select job
 from all_jobs
-where log_user = upper(:owner) or schema_user = upper(:owner)
+where log_user = :owner or schema_user = :owner
 """
 
 SQL_SET_DDL_LOCK_TIMEOUT = "alter session set ddl_lock_timeout=30"
 
-SQL_VALIDATE_SCHEMA_NAME = "select dbms_assert.schema_name(upper(:schema)) FROM dual"
+SQL_VALIDATE_SCHEMA_NAME = "select dbms_assert.schema_name(:schema) FROM dual"
 
 SQL_GET_SCHEMA_CONNECTION_CNT = """
 select count(*)
