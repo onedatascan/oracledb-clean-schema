@@ -164,7 +164,11 @@ def check_for_schema_connections(schema: str, conn: Connection) -> None:
                 )
 
 
-def validate_schema_name(schema: str, conn: Connection) -> None:
+def validate_schema_name(schema: str, conn: Connection):
+    """
+    Ensure schema is a legal string and is present in the database.
+    """
+
     with conn.cursor() as cur:
         try:
             cur.execute(
@@ -173,6 +177,32 @@ def validate_schema_name(schema: str, conn: Connection) -> None:
         except oracledb.DatabaseError as e:
             e.add_note(f"{schema} schema does not exist!")
             raise e
+
+
+def conform_schema_name(schema: str, conn: Connection) -> str:
+    """
+    Convert supplied schema to uppercase. Prevent execution on mixed
+    or lowercase schemas.
+    """
+    target_schema = schema.upper()
+
+    with conn.cursor() as cur:
+        cur.execute(constants.SQL_GET_NON_UPPERCASE_SCHEMAS)
+        non_uppercase_schemas = map(lambda r: r[0], cur.fetchall())
+
+    try:
+        for s in non_uppercase_schemas:
+            if target_schema == s.upper():
+                raise ValueError(
+                    "A mixed or lowercase schema was found that matches "
+                    " the target schema and is not supported! target: "
+                    f"{target_schema} schema: {s}"
+                )
+    except ValueError as e:
+        logger.exception(e)
+        raise e
+    else:
+        return target_schema
 
 
 def get_drop_sql(schema_obj: SchemaObject) -> str:
@@ -204,17 +234,31 @@ def get_drop_sql(schema_obj: SchemaObject) -> str:
         case SchemaObject(SchemaObjectType.SYNONYM, schema, name):
             return f'drop synonym {schema}."{name}"'
         case SchemaObject(SchemaObjectType.TYPE, schema, name):
-            return f"drop type {schema}.{name} force"
-        case SchemaObject(SchemaObjectType.JOB, name):
-            return f"begin dbms_scheduler.drop_job('{name}', force => TRUE); end;"
-        case SchemaObject(SchemaObjectType.CHAIN, name):
-            return f"begin dbms_scheduler.drop_chain('{name}', force => TRUE); end;"
-        case SchemaObject(SchemaObjectType.PROGRAM, name):
-            return f"begin dbms_scheduler.drop_program('{name}', force => TRUE); end;"
-        case SchemaObject(SchemaObjectType.CREDENTIALS, name):
-            return (
-                f"begin dbms_credential.drop_credential('{name}', force => TRUE); end;"
-            )
+            return f'drop type {schema}."{name}" force'
+        case SchemaObject(SchemaObjectType.JOB, schema, name):
+            return f"""
+            begin
+                dbms_scheduler.drop_job('{schema}.{name}', force => TRUE);
+            end;
+            """
+        case SchemaObject(SchemaObjectType.CHAIN, schema, name):
+            return f"""
+            begin
+                dbms_scheduler.drop_chain('{schema}.{name}', force => TRUE);
+            end;
+            """
+        case SchemaObject(SchemaObjectType.PROGRAM, schema, name):
+            return f"""
+            begin
+                dbms_scheduler.drop_program('{schema}.{name}', force => TRUE);
+            end;
+            """
+        case SchemaObject(SchemaObjectType.CREDENTIALS, schema, name):
+            return f"""
+            begin
+                dbms_credential.drop_credential('{schema}.{name}', force => TRUE);
+            end;
+            """
         case _:
             raise ValueError("Unhandled schema object %s", schema_obj)
 
@@ -272,7 +316,7 @@ def drop_object_type(pool: ConnectionPool, q: queue.Queue[SchemaObject], paralle
                 logger.error(f"sql: '{', '.join(e.__notes__)}' error: {e}")
 
 
-def protected_schema_guard(target_schema: str, force: bool):
+def protected_schema_guard(target_schema: str, force: bool, conn: Connection):
     """
     Prevent protected schemas or schemas with a name matching the
     PROTECTED_SCHEMA_REGEX pattern from being dropped.
@@ -282,7 +326,10 @@ def protected_schema_guard(target_schema: str, force: bool):
     if not env_loaded:
         logger.debug("environmental file '%s' not found", dotenv_path)
 
-    protected_schemas = ["SYS", "SYSTEM"]
+    with conn.cursor() as cur:
+        cur.execute(constants.SQL_GET_ORA_MAINTAINED_SCHEMAS)
+        protected_schemas: set[str] = set(r[0] for r in cur.fetchall())
+
     protected_schema_pattern = os.getenv(
         "PROTECTED_SCHEMA_REGEX", constants.MATCH_NOTHING
     )
@@ -292,7 +339,9 @@ def protected_schema_guard(target_schema: str, force: bool):
     try:
         logger.debug("Schema is: %s", target_schema)
         if target_schema in protected_schemas:
-            raise ValueError(f"Cannot execute against: {protected_schemas}")
+            raise ValueError(
+                f"Cannot execute against protected schema: {protected_schemas}"
+            )
 
         if not force:
             if protected_schema_pattern == constants.MATCH_NOTHING:
@@ -327,8 +376,6 @@ def drop_all(
     global EXECUTING_USER
     EXECUTING_USER = user
 
-    protected_schema_guard(target_schema, force)
-
     pool = create_pool(
         user=user,
         password=password,
@@ -338,6 +385,8 @@ def drop_all(
     )
     conn = pool.acquire()
 
+    target_schema = conform_schema_name(target_schema, conn)
+    protected_schema_guard(target_schema, force, conn)
     validate_schema_name(target_schema, conn)
     check_for_schema_connections(target_schema, conn)
 

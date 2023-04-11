@@ -10,6 +10,11 @@ def test_protected_schema(connect_params, protected_schema):
         drop_all(**connect_params, target_schema=protected_schema)
 
 
+def test_lowercase_schema(connect_params, lowercase_schema):
+    with pytest.raises(ValueError, match=r"A mixed or lowercase schema was found.*"):
+        drop_all(**connect_params, target_schema=lowercase_schema)
+
+
 def test_clean_schema(connect_params, target_schema):
     remaining = drop_all(**connect_params, target_schema=target_schema)
     logger.info("remaining: %s", remaining)

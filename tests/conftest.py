@@ -3,11 +3,15 @@ from typing import cast
 
 import pytest
 import oracledb
+from oracledb.connection import Connection
 from dotenv import dotenv_values, load_dotenv
 
 logger = logging.getLogger(__name__)
 
 load_dotenv(override=True)
+
+CONNECTION: Connection | None = None
+
 
 def mock_env_config() -> dict[str, str | int]:
     config_map = dotenv_values(verbose=True)
@@ -36,6 +40,20 @@ def connect_params(env_config):
 
 
 @pytest.fixture(scope="session", autouse=True)
+def connection(connect_params) -> Connection:
+    global CONNECTION
+    if CONNECTION:
+        return CONNECTION
+
+    CONNECTION = oracledb.connect(
+        user=connect_params["user"],
+        password=connect_params["password"],
+        dsn=f"{connect_params['host']}/{connect_params['database']}",
+    )
+    return CONNECTION
+
+
+@pytest.fixture(scope="session", autouse=True)
 def target_schema(env_config):
     return env_config["SCHEMA1"]
 
@@ -45,15 +63,33 @@ def protected_schema(env_config):
     return env_config["PROTECTED_SCHEMA"]
 
 
+def ensure_user(connection: Connection, username, password):
+    check_sql = """
+    select username
+    from dba_users
+    where username = :username
+    """
+    create_sql = f'create user "{username}" identified by {password}'
+
+    with connection.cursor() as cur:
+        cur.execute(check_sql, [username])
+        user_exists = cur.fetchone() is not None
+
+        if not user_exists:
+            cur.execute(create_sql)
+
+
+@pytest.fixture
+def lowercase_schema(connection) -> str:
+    schema = "some_lowercase_user"
+    ensure_user(connection, schema, schema)
+    return schema
+
+
 @pytest.fixture(scope="session", autouse=True)
-def run_tests(connect_params, target_schema):
+def run_tests(connection, target_schema):
     yield
     logger.info("Dropping schema %s", target_schema)
-    connection = oracledb.connect(
-        user=connect_params["user"],
-        password=connect_params["password"],
-        dsn=f"{connect_params['host']}/{connect_params['database']}",
-    )
     with connection.cursor() as cursor:
         cursor.execute(f"drop user {target_schema} cascade")
     connection.close()
