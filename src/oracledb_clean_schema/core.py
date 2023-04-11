@@ -234,17 +234,31 @@ def get_drop_sql(schema_obj: SchemaObject) -> str:
         case SchemaObject(SchemaObjectType.SYNONYM, schema, name):
             return f'drop synonym {schema}."{name}"'
         case SchemaObject(SchemaObjectType.TYPE, schema, name):
-            return f"drop type {schema}.{name} force"
-        case SchemaObject(SchemaObjectType.JOB, name):
-            return f"begin dbms_scheduler.drop_job('{name}', force => TRUE); end;"
-        case SchemaObject(SchemaObjectType.CHAIN, name):
-            return f"begin dbms_scheduler.drop_chain('{name}', force => TRUE); end;"
-        case SchemaObject(SchemaObjectType.PROGRAM, name):
-            return f"begin dbms_scheduler.drop_program('{name}', force => TRUE); end;"
-        case SchemaObject(SchemaObjectType.CREDENTIALS, name):
-            return (
-                f"begin dbms_credential.drop_credential('{name}', force => TRUE); end;"
-            )
+            return f'drop type {schema}."{name}" force'
+        case SchemaObject(SchemaObjectType.JOB, schema, name):
+            return f"""
+            begin
+                dbms_scheduler.drop_job('{schema}.{name}', force => TRUE);
+            end;
+            """
+        case SchemaObject(SchemaObjectType.CHAIN, schema, name):
+            return f"""
+            begin
+                dbms_scheduler.drop_chain('{schema}.{name}', force => TRUE);
+            end;
+            """
+        case SchemaObject(SchemaObjectType.PROGRAM, schema, name):
+            return f"""
+            begin
+                dbms_scheduler.drop_program('{schema}.{name}', force => TRUE);
+            end;
+            """
+        case SchemaObject(SchemaObjectType.CREDENTIALS, schema, name):
+            return f"""
+            begin
+                dbms_credential.drop_credential('{schema}.{name}', force => TRUE);
+            end;
+            """
         case _:
             raise ValueError("Unhandled schema object %s", schema_obj)
 
