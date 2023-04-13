@@ -162,7 +162,7 @@ class Envelope(BaseModel, extra=Extra.allow):
 
 
 def request_handler(event: RequestModel, context: LambdaContext) -> HTTPResponse:
-    # logger.debug("RequestModel: %s", repr(event))
+    logger.debug("RequestModel: %s", repr(event))
     password = parse_secret(event)
     return run_task(event, password)
 
