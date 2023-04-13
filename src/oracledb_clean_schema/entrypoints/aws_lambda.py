@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import base64
+from collections import defaultdict
 import json
 import os
 from http import HTTPStatus
-from typing import Final, Protocol, TypeAlias, TypedDict, runtime_checkable
+from typing import Final, Protocol, TypeAlias, TypedDict, cast, runtime_checkable
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.logging.utils import copy_config_to_registered_loggers
@@ -68,6 +69,25 @@ class BadRequest(Exception):
 
 class Panic(Exception):
     http_status = HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+def format_validation_errors(e: ValidationError) -> dict[str, set]:
+    logger.debug("formatting exception errors: %s", e.errors())
+    reasons = defaultdict(set)
+
+    for err in e.errors():
+        field = ".".join(cast(tuple, err["loc"]))
+        ctx = err.get("ctx", {})
+
+        if err["type"] == "value_error.missing":
+            reasons["possibly_missing"].add(field)
+        elif err["type"] == "value_error.const":
+            reasons["possibly_invalid"].add(
+                (field, ctx.get("given"), ctx.get("permitted"))
+            )
+        else:
+            reasons["other"].add((field, tuple(err.items())))
+    return dict(reasons)
 
 
 def exception_handler(ex: Exception, extra: dict[str, json_types] | None = None):
@@ -214,8 +234,12 @@ def lambda_handler(event: dict, context: LambdaContext) -> HTTPResponse | None:
     try:
         return request_handler(parse(event, model=RequestModel), context)
     except ValidationError as raw_validation_exc:
-        ee = envelope_validation_exc
-        re = raw_validation_exc
+        ee = (
+            format_validation_errors(envelope_validation_exc)
+            if envelope_validation_exc
+            else None
+        )
+        re = format_validation_errors(raw_validation_exc)
         exc = BadRequest(
             {"RawValidationException": re, "EnvelopeValidationException": ee}
         )
