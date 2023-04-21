@@ -13,7 +13,7 @@ def main():
     )
 
     parser = argparse.ArgumentParser(description="Drop all objects in Oracle schema")
-    parser.add_argument("--user", required=True, help="Database login user")
+    parser.add_argument("--username", required=True, help="Database login user")
     parser.add_argument("--password", required=True, help="Database login password")
     parser.add_argument("--host", required=True, help="Database service host")
     parser.add_argument("--database", required=True, help="Database service name")
@@ -29,7 +29,7 @@ def main():
 
     args = parser.parse_args()
     remaining_object_count = drop_all(
-        args.user,
+        args.username,
         args.password,
         args.host,
         args.database,

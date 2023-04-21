@@ -113,7 +113,7 @@ def parse_secret(event: RequestModel) -> str:
 def run_task(event, password):
     try:
         remaining_object_count = drop_all(
-            event.connection.user,
+            event.connection.username,
             password,
             event.connection.host,
             event.connection.database,
@@ -150,7 +150,7 @@ def run_task(event, password):
 
 
 class ConnectionModel(BaseModel):
-    user: str
+    username: str
     password: SecretStr
     host: str
     database: str
@@ -197,7 +197,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> HTTPResponse | None:
     """sample event:
     event = {
         "connection": {
-            "user": "system",
+            "username": "system",
             "password": "manager",
             "host": "host.docker.internal",
             "database": "orclpdb1"

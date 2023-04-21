@@ -32,7 +32,7 @@ def env_config():
 @pytest.fixture(scope="session", autouse=True)
 def connect_params(env_config):
     return {
-        "user": env_config["ORACLE_USER"],
+        "username": env_config["ORACLE_USER"],
         "password": env_config["ORACLE_PWD"],
         "host": env_config["ORACLE_HOST"],
         "database": env_config["ORACLE_DATABASE"],
@@ -46,7 +46,7 @@ def connection(connect_params) -> Connection:
         return CONNECTION
 
     CONNECTION = oracledb.connect(
-        user=connect_params["user"],
+        user=connect_params["username"],
         password=connect_params["password"],
         dsn=f"{connect_params['host']}/{connect_params['database']}",
     )

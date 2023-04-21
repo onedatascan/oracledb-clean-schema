@@ -24,7 +24,7 @@ from oracledb_clean_schema import drop_all
 logging.basicConfig(level="DEBUG")
 
 objs_remaining = drop_all(
-    user="system",
+    username="system",
     password="manager",
     host="localhost",
     database="orclpdb1",
@@ -37,14 +37,14 @@ print(objs_remaining)
 ### CLI
 ```bash
 oracledb-clean-schema --help
-usage: oracledb-clean-schema [-h] --user USER --password PASSWORD --host HOST --database DATABASE --target-schema
+usage: oracledb-clean-schema [-h] --username USERNAME --password PASSWORD --host HOST --database DATABASE --target-schema
                              TARGET_SCHEMA [--parallel PARALLEL] [--force FORCE]
 
 Drop all objects in Oracle schema
 
 options:
   -h, --help            show this help message and exit
-  --user USER           Database login user
+  --username USERNAME   Database login user
   --password PASSWORD   Database login password
   --host HOST           Database service host
   --database DATABASE   Database service name
@@ -55,7 +55,7 @@ options:
 ```
 
 ```bash
-oracledb-clean-schema --user hr --password hr --host localhost --database orclpdb1 --target-schema hr --parallel 8
+oracledb-clean-schema --username hr --password hr --host localhost --database orclpdb1 --target-schema hr --parallel 8
 ```
 
 ### AWS Lambda
@@ -65,7 +65,7 @@ This example assumes the use of a custom domain name mapped to an API Gateway or
 curl -XPOST "https://oracledb-util-api.somedomain.com/clean" -d \
 '{
       "connection": {
-        "user": "system",
+        "username": "system",
         "password": "manager",
         "host": "some-host",
         "database": "ORCLPDB1"
