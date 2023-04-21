@@ -15,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description="Drop all objects in Oracle schema")
     parser.add_argument("--username", required=True, help="Database login user")
     parser.add_argument("--password", required=True, help="Database login password")
-    parser.add_argument("--host", required=True, help="Database service host")
+    parser.add_argument("--hostname", required=True, help="Database service host")
     parser.add_argument("--database", required=True, help="Database service name")
     parser.add_argument(
         "--target-schema", required=True, help="Database schema to clear"
@@ -31,7 +31,7 @@ def main():
     remaining_object_count = drop_all(
         args.username,
         args.password,
-        args.host,
+        args.hostname,
         args.database,
         args.target_schema,
         args.parallel,

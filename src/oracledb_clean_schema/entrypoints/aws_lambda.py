@@ -115,7 +115,7 @@ def run_task(event, password):
         remaining_object_count = drop_all(
             event.connection.username,
             password,
-            event.connection.host,
+            event.connection.hostname,
             event.connection.database,
             event.payload.target_schema,
             event.payload.parallel,
@@ -152,7 +152,7 @@ def run_task(event, password):
 class ConnectionModel(BaseModel):
     username: str
     password: SecretStr
-    host: str
+    hostname: str
     database: str
 
 
@@ -199,7 +199,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> HTTPResponse | None:
         "connection": {
             "username": "system",
             "password": "manager",
-            "host": "host.docker.internal",
+            "hostname": "host.docker.internal",
             "database": "orclpdb1"
         },
         "payload": {

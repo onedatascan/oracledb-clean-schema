@@ -26,7 +26,7 @@ logging.basicConfig(level="DEBUG")
 objs_remaining = drop_all(
     username="system",
     password="manager",
-    host="localhost",
+    hostname="localhost",
     database="orclpdb1",
     target_schema="hr",
     parallel=8
@@ -37,7 +37,7 @@ print(objs_remaining)
 ### CLI
 ```bash
 oracledb-clean-schema --help
-usage: oracledb-clean-schema [-h] --username USERNAME --password PASSWORD --host HOST --database DATABASE --target-schema
+usage: oracledb-clean-schema [-h] --username USERNAME --password PASSWORD --hostname HOSTNAME --database DATABASE --target-schema
                              TARGET_SCHEMA [--parallel PARALLEL] [--force FORCE]
 
 Drop all objects in Oracle schema
@@ -46,7 +46,7 @@ options:
   -h, --help            show this help message and exit
   --username USERNAME   Database login user
   --password PASSWORD   Database login password
-  --host HOST           Database service host
+  --hostname HOSTNAME   Database service host
   --database DATABASE   Database service name
   --target-schema TARGET_SCHEMA
                         Database schema to clear
@@ -55,7 +55,7 @@ options:
 ```
 
 ```bash
-oracledb-clean-schema --username hr --password hr --host localhost --database orclpdb1 --target-schema hr --parallel 8
+oracledb-clean-schema --username hr --password hr --hostname localhost --database orclpdb1 --target-schema hr --parallel 8
 ```
 
 ### AWS Lambda
@@ -67,7 +67,7 @@ curl -XPOST "https://oracledb-util-api.somedomain.com/clean" -d \
       "connection": {
         "username": "system",
         "password": "manager",
-        "host": "some-host",
+        "hostname": "some-host",
         "database": "ORCLPDB1"
       },
       "payload": {
