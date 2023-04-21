@@ -68,7 +68,8 @@ curl -XPOST "https://oracledb-util-api.somedomain.com/clean" -d \
         "username": "system",
         "password": "manager",
         "hostname": "some-host",
-        "database": "ORCLPDB1"
+        "database": "ORCLPDB1",
+        "secret": "Optional AWS SecretsManger secret name/arn with the above fields"
       },
       "payload": {
          "target_schema": "hr",

@@ -100,21 +100,11 @@ def exception_handler(ex: Exception, extra: dict[str, json_types] | None = None)
         )
 
 
-def parse_secret(event: RequestModel) -> str:
-    password = event.connection.password.get_secret_value()
-    if password.startswith("arn:"):
-        secret = parameters.get_secret(password, transform="json")
-        password = secret["PASSWORD"]  # type: ignore
-    else:
-        logger.warning("Password supplied as lambda arg!")
-    return password
-
-
-def run_task(event: RequestModel, password: str) -> HTTPResponse:
+def run_task(event: RequestModel) -> HTTPResponse:
     try:
         remaining_object_count = drop_all(
             event.connection.username,
-            password,
+            event.connection.password.get_secret_value(),
             event.connection.hostname,
             event.connection.database,
             event.payload.target_schema,
@@ -154,6 +144,21 @@ class ConnectionModel(BaseModel):
     password: SecretStr
     hostname: str
     database: str
+    secret: str | None
+
+    @root_validator(pre=True)
+    def populate_from_secret(cls, values):
+        if "secret" in values:
+            try:
+                secret_value = parameters.get_secret(values["secret"], transform="json")
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to fetch or parse secret: {values['secret']} "
+                    f"reason: {str(e)}"
+                ) from e
+            else:
+                values.update(secret_value)
+        return values
 
 
 class PayloadModel(BaseModel):
@@ -183,8 +188,7 @@ class Envelope(BaseModel, extra=Extra.allow):
 
 def request_handler(event: RequestModel, context: LambdaContext) -> HTTPResponse:
     logger.debug("RequestModel: %s", repr(event))
-    password = parse_secret(event)
-    return run_task(event, password)
+    return run_task(event)
 
 
 @event_parser(model=Envelope)
@@ -200,7 +204,8 @@ def lambda_handler(event: dict, context: LambdaContext) -> HTTPResponse | None:
             "username": "system",
             "password": "manager",
             "hostname": "host.docker.internal",
-            "database": "orclpdb1"
+            "database": "orclpdb1",
+            "secret": "Optional AWS SecretsManger secret name/arn with the above fields"
         },
         "payload": {
             "target_schema": "hr2",
