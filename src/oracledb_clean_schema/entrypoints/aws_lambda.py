@@ -110,7 +110,7 @@ def parse_secret(event: RequestModel) -> str:
     return password
 
 
-def run_task(event, password):
+def run_task(event: RequestModel, password: str) -> HTTPResponse:
     try:
         remaining_object_count = drop_all(
             event.connection.username,
