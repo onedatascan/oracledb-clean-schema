@@ -5,6 +5,7 @@ from oracledb_clean_schema.core import drop_all
 
 logger = logging.getLogger(__name__)
 
+
 def test_protected_schema(connect_params, protected_schema):
     with pytest.raises(ValueError, match=r".* matches protected schema pattern!.*"):
         drop_all(**connect_params, target_schema=protected_schema)
