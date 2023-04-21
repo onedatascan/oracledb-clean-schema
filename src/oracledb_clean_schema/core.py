@@ -361,9 +361,9 @@ def protected_schema_guard(target_schema: str, force: bool, conn: Connection):
 
 
 def drop_all(
-    user: str,
+    username: str,
     password: str,
-    host: str,
+    hostname: str,
     database: str,
     target_schema: str,
     parallel=1,
@@ -374,12 +374,12 @@ def drop_all(
     """
 
     global EXECUTING_USER
-    EXECUTING_USER = user
+    EXECUTING_USER = username
 
     pool = create_pool(
-        user=user,
+        user=username,
         password=password,
-        dsn=f"{host}/{database}",
+        dsn=f"{hostname}/{database}",
         max=parallel + 1,
         session_callback=init_session,
     )

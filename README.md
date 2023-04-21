@@ -24,9 +24,9 @@ from oracledb_clean_schema import drop_all
 logging.basicConfig(level="DEBUG")
 
 objs_remaining = drop_all(
-    user="system",
+    username="system",
     password="manager",
-    host="localhost",
+    hostname="localhost",
     database="orclpdb1",
     target_schema="hr",
     parallel=8
@@ -37,16 +37,16 @@ print(objs_remaining)
 ### CLI
 ```bash
 oracledb-clean-schema --help
-usage: oracledb-clean-schema [-h] --user USER --password PASSWORD --host HOST --database DATABASE --target-schema
+usage: oracledb-clean-schema [-h] --username USERNAME --password PASSWORD --hostname HOSTNAME --database DATABASE --target-schema
                              TARGET_SCHEMA [--parallel PARALLEL] [--force FORCE]
 
 Drop all objects in Oracle schema
 
 options:
   -h, --help            show this help message and exit
-  --user USER           Database login user
+  --username USERNAME   Database login user
   --password PASSWORD   Database login password
-  --host HOST           Database service host
+  --hostname HOSTNAME   Database service host
   --database DATABASE   Database service name
   --target-schema TARGET_SCHEMA
                         Database schema to clear
@@ -55,7 +55,7 @@ options:
 ```
 
 ```bash
-oracledb-clean-schema --user hr --password hr --host localhost --database orclpdb1 --target-schema hr --parallel 8
+oracledb-clean-schema --username hr --password hr --hostname localhost --database orclpdb1 --target-schema hr --parallel 8
 ```
 
 ### AWS Lambda
@@ -65,10 +65,11 @@ This example assumes the use of a custom domain name mapped to an API Gateway or
 curl -XPOST "https://oracledb-util-api.somedomain.com/clean" -d \
 '{
       "connection": {
-        "user": "system",
+        "username": "system",
         "password": "manager",
-        "host": "some-host",
-        "database": "ORCLPDB1"
+        "hostname": "some-host",
+        "database": "ORCLPDB1",
+        "secret": "Optional AWS SecretsManger secret name/arn with the above fields"
       },
       "payload": {
          "target_schema": "hr",

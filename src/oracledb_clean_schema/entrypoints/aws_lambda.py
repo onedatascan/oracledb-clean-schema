@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import base64
+from collections import defaultdict
 import json
 import os
 from http import HTTPStatus
-from typing import Final, Protocol, TypeAlias, TypedDict, runtime_checkable
+from typing import Final, Protocol, TypeAlias, TypedDict, cast, runtime_checkable
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.logging.utils import copy_config_to_registered_loggers
@@ -70,6 +71,25 @@ class Panic(Exception):
     http_status = HTTPStatus.INTERNAL_SERVER_ERROR
 
 
+def format_validation_errors(e: ValidationError) -> dict[str, set]:
+    logger.debug("formatting exception errors: %s", e.errors())
+    reasons = defaultdict(set)
+
+    for err in e.errors():
+        field = ".".join(cast(tuple, err["loc"]))
+        ctx = err.get("ctx", {})
+
+        if err["type"] == "value_error.missing":
+            reasons["possibly_missing"].add(field)
+        elif err["type"] == "value_error.const":
+            reasons["possibly_invalid"].add(
+                (field, ctx.get("given"), ctx.get("permitted"))
+            )
+        else:
+            reasons["other"].add((field, tuple(err.items())))
+    return dict(reasons)
+
+
 def exception_handler(ex: Exception, extra: dict[str, json_types] | None = None):
     logger.exception(ex, extra=extra)
     if isinstance(ex, HTTPException):
@@ -80,22 +100,12 @@ def exception_handler(ex: Exception, extra: dict[str, json_types] | None = None)
         )
 
 
-def parse_secret(event: RequestModel) -> str:
-    password = event.connection.password.get_secret_value()
-    if password.startswith("arn:"):
-        secret = parameters.get_secret(password, transform="json")
-        password = secret["PASSWORD"]  # type: ignore
-    else:
-        logger.warning("Password supplied as lambda arg!")
-    return password
-
-
-def run_task(event, password):
+def run_task(event: RequestModel) -> HTTPResponse:
     try:
         remaining_object_count = drop_all(
-            event.connection.user,
-            password,
-            event.connection.host,
+            event.connection.username,
+            event.connection.password.get_secret_value(),
+            event.connection.hostname,
             event.connection.database,
             event.payload.target_schema,
             event.payload.parallel,
@@ -130,10 +140,25 @@ def run_task(event, password):
 
 
 class ConnectionModel(BaseModel):
-    user: str
+    username: str
     password: SecretStr
-    host: str
+    hostname: str
     database: str
+    secret: str | None
+
+    @root_validator(pre=True)
+    def populate_from_secret(cls, values):
+        if "secret" in values:
+            try:
+                secret_value = parameters.get_secret(values["secret"], transform="json")
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to fetch or parse secret: {values['secret']} "
+                    f"reason: {str(e)}"
+                ) from e
+            else:
+                values.update(secret_value)
+        return values
 
 
 class PayloadModel(BaseModel):
@@ -162,9 +187,8 @@ class Envelope(BaseModel, extra=Extra.allow):
 
 
 def request_handler(event: RequestModel, context: LambdaContext) -> HTTPResponse:
-    # logger.debug("RequestModel: %s", repr(event))
-    password = parse_secret(event)
-    return run_task(event, password)
+    logger.debug("RequestModel: %s", repr(event))
+    return run_task(event)
 
 
 @event_parser(model=Envelope)
@@ -177,10 +201,11 @@ def lambda_handler(event: dict, context: LambdaContext) -> HTTPResponse | None:
     """sample event:
     event = {
         "connection": {
-            "user": "system",
+            "username": "system",
             "password": "manager",
-            "host": "host.docker.internal",
-            "database": "orclpdb1"
+            "hostname": "host.docker.internal",
+            "database": "orclpdb1",
+            "secret": "Optional AWS SecretsManger secret name/arn with the above fields"
         },
         "payload": {
             "target_schema": "hr2",
@@ -191,16 +216,36 @@ def lambda_handler(event: dict, context: LambdaContext) -> HTTPResponse | None:
     """
     logger.set_correlation_id(context.aws_request_id)
 
+    envelope_validation_exc: ValidationError | None = None
+    if ENVELOPE:
+        # Extract the request from outer envelope supplied as an env arg. Valid args
+        # could potentially be any one of:
+        # https://awslabs.github.io/aws-lambda-powertools-python/2.9.1/utilities/parser/#built-in-models
+        # Currently the expectation is that the outer envelope is a AlbModel or
+        # APIGatewayProxyEventModel
+        logger.debug("ENVELOPE=%s", ENVELOPE)
+        expected_envelope = getattr(models, ENVELOPE)
+        try:
+            envelope_request = parse(event=event, model=expected_envelope)
+            return envelope_handler(envelope_request, context)
+        except ValidationError as e:
+            # We might have been passed an un-enveloped request
+            logger.info(
+                f"Envelope validation failed for {ENVELOPE}! Attempting raw request "
+                "validation..."
+            )
+            envelope_validation_exc = e
+
     try:
-        if ENVELOPE:
-            # Extract the request from outer envelope supplied as an env arg. Valid args
-            # could potentially be any one of:
-            # https://awslabs.github.io/aws-lambda-powertools-python/2.9.1/utilities/parser/#built-in-models
-            # Currently the expectation is that the outer envelope is a AlbModel or
-            # APIGatewayProxyEventModel
-            envelope = getattr(models, ENVELOPE)
-            return envelope_handler(parse(event=event, model=envelope), context)
-        else:
-            return request_handler(parse(event, model=RequestModel), context)
-    except ValidationError as e:
-        return exception_handler(BadRequest(e))
+        return request_handler(parse(event, model=RequestModel), context)
+    except ValidationError as raw_validation_exc:
+        ee = (
+            format_validation_errors(envelope_validation_exc)
+            if envelope_validation_exc
+            else None
+        )
+        re = format_validation_errors(raw_validation_exc)
+        exc = BadRequest(
+            {"RawValidationException": re, "EnvelopeValidationException": ee}
+        )
+        return exception_handler(exc)
