@@ -123,8 +123,8 @@ def run_task(event: RequestModel) -> HTTPResponse:
             HTTPStatus.OK,
             {
                 "schema": event.payload.target_schema,
-                "remainingObjectCount": remaining_object_count
-            }
+                "remainingObjectCount": remaining_object_count,
+            },
         )
     else:
         return exception_handler(
@@ -134,7 +134,7 @@ def run_task(event: RequestModel) -> HTTPResponse:
             ),
             extra={
                 "schema": event.payload.target_schema,
-                "remainingObjectCount": remaining_object_count
+                "remainingObjectCount": remaining_object_count,
             },
         )
 
