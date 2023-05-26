@@ -7,11 +7,11 @@ SQL_GET_OBJECT_TYPE = """
 select ao.object_type,
        ao.owner,
        ao.object_name
-from all_objects ao
+from dba_objects ao
 where ao.object_type = :kind
 and not exists (
         select 1
-        from all_tab_identity_cols atic
+        from dba_tab_identity_cols atic
         where atic.sequence_name = ao.object_name
         and atic.owner = ao.owner
         and ao.object_type = 'SEQUENCE'
@@ -24,7 +24,7 @@ SQL_GET_REF_CONSTRAINTS = """
 select constraint_name,
        owner,
        table_name
-from all_constraints
+from dba_constraints
 where constraint_type = 'R'
 and owner = :owner
 """
@@ -32,13 +32,13 @@ and owner = :owner
 SQL_GET_CREDS = """
 select owner,
        credential_name
-FROM all_credentials
+FROM dba_credentials
 where owner = :owner
 """
 
 SQL_GET_USER_OBJ_COUNT = """
 select count(*)
-from all_objects
+from dba_objects
 where owner = :owner
 """
 
@@ -66,7 +66,7 @@ SQL_PURGE_USER_RECYCLE_BIN = "purge recyclebin"
 
 SQL_GET_JOBS = """
 select job
-from all_jobs
+from dba_jobs
 where log_user = :owner or schema_user = :owner
 """
 
