@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import base64
-from collections import defaultdict
 import json
 import os
+from collections import defaultdict
 from http import HTTPStatus
 from typing import Final, Protocol, TypeAlias, TypedDict, cast, runtime_checkable
 
