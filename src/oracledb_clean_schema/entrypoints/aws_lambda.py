@@ -91,7 +91,7 @@ def format_validation_errors(e: ValidationError) -> dict[str, set]:
 
 
 def exception_handler(ex: Exception, extra: dict[str, json_types] | None = None):
-    logger.exception(ex, extra=extra)
+    logger.error(ex)
     if isinstance(ex, HTTPException):
         return build_response(ex.http_status, {"exception": str(ex), "extra": extra})
     else:
