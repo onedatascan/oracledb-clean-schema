@@ -164,6 +164,35 @@ def check_for_schema_connections(schema: str, conn: Connection) -> None:
                 )
 
 
+def check_permissions(schema: str, conn: Connection):
+    """
+    Ensure that the executing user either has the DBA role or
+    is clearing own schema and has select dictionary privileges.
+    """
+    if schema.casefold() == EXECUTING_USER.casefold():
+        return
+
+    with conn.cursor() as cur:
+        try:
+            cur.execute(
+                constants.SQL_HAS_DBA_ROLE,
+                parameters=dict(executing_user=EXECUTING_USER.upper()),
+            )
+            has_dba_role = True if int(cast(tuple, cur.fetchone())[0]) == 1 else False
+            if not has_dba_role:
+                raise ValueError(
+                    "Executing user must have either DBA role or is clearing own schema!"
+                )
+        except ValueError as e:
+            logger.exception(e)
+            raise e
+        except oracledb.DatabaseError as e:
+            (error_obj,) = e.args
+            if error_obj.code == constants.TABLE_DOES_NOT_EXIST:
+                e.add_note("Executing user must have SELECT DICTIONARY privileges!")
+            raise e
+
+
 def validate_schema_name(schema: str, conn: Connection):
     """
     Ensure schema is a legal string and is present in the database.
@@ -385,6 +414,7 @@ def drop_all(
     )
     conn = pool.acquire()
 
+    check_permissions(target_schema, conn)
     target_schema = conform_schema_name(target_schema, conn)
     protected_schema_guard(target_schema, force, conn)
     validate_schema_name(target_schema, conn)

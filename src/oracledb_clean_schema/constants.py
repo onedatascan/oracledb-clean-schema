@@ -80,3 +80,10 @@ from v$session
 where (client_info <> :service_name or client_info is null)
 and schemaname = :owner
 """
+
+SQL_HAS_DBA_ROLE = """
+select count(*)
+from dba_role_privs
+where grantee = :executing_user
+and granted_role = 'DBA'
+"""
