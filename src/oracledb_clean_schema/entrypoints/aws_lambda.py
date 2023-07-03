@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import base64
-from collections import defaultdict
 import json
 import os
+from collections import defaultdict
 from http import HTTPStatus
 from typing import Final, Protocol, TypeAlias, TypedDict, cast, runtime_checkable
 
@@ -91,7 +91,7 @@ def format_validation_errors(e: ValidationError) -> dict[str, set]:
 
 
 def exception_handler(ex: Exception, extra: dict[str, json_types] | None = None):
-    logger.exception(ex, extra=extra)
+    logger.error(ex)
     if isinstance(ex, HTTPException):
         return build_response(ex.http_status, {"exception": str(ex), "extra": extra})
     else:
