@@ -91,7 +91,7 @@ def get_dbms_jobs(schema: str, conn: Connection) -> Iterator[SchemaObject]:
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_JOBS, parameters=dict(owner=schema))
         for row in cur.fetchall():
-            yield SchemaObject(SchemaObjectType.DBMS_JOB, row[0], row[1])
+            yield SchemaObject(SchemaObjectType.DBMS_JOB, schema, row[0])
 
 
 def get_all_objects(schema: str, conn: Connection) -> Iterator[SchemaObject]:
@@ -252,7 +252,7 @@ def get_drop_sql(schema_obj: SchemaObject) -> str:
             if schema.casefold() == EXECUTING_USER.casefold():
                 return f"begin dbms_job.remove('{name}');"
             else:
-                return f"begin dbms_ijob.remove('{name}'); end;"
+                return f"begin sys.dbms_ijob.remove('{name}'); end;"
         case SchemaObject(SchemaObjectType.TABLE, schema, name):
             return f'drop table {schema}."{name}" cascade constraints purge'
         case SchemaObject(SchemaObjectType.VIEW, schema, name):
