@@ -87,6 +87,7 @@ def purge_recycle_bin(schema: str, conn: Connection) -> None:
 
 
 def get_dbms_jobs(schema: str, conn: Connection) -> Iterator[SchemaObject]:
+    logger.debug("Fetching dbms jobs for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_JOBS, parameters=dict(owner=schema))
         for row in cur.fetchall():
@@ -94,6 +95,7 @@ def get_dbms_jobs(schema: str, conn: Connection) -> Iterator[SchemaObject]:
 
 
 def get_all_objects(schema: str, conn: Connection) -> Iterator[SchemaObject]:
+    logger.debug("Fetching objects for %s", schema)
     with conn.cursor() as cur:
         for kind in SchemaObjectType:
             cur.execute(
@@ -105,6 +107,7 @@ def get_all_objects(schema: str, conn: Connection) -> Iterator[SchemaObject]:
 
 
 def get_ref_constraints(schema: str, conn: Connection) -> Iterator[RefConstraintObject]:
+    logger.debug("Fetching referential constraints for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_REF_CONSTRAINTS, parameters=dict(owner=schema))
         for row in cur.fetchall():
@@ -114,6 +117,7 @@ def get_ref_constraints(schema: str, conn: Connection) -> Iterator[RefConstraint
 
 
 def get_db_credentials(schema: str, conn: Connection) -> Iterator[SchemaObject]:
+    logger.debug("Fetching dbms credentials for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_CREDS, parameters=dict(owner=schema))
         for row in cur.fetchall():
@@ -121,6 +125,7 @@ def get_db_credentials(schema: str, conn: Connection) -> Iterator[SchemaObject]:
 
 
 def get_object_count(schema: str, conn: Connection) -> int:
+    logger.debug("Fetching object count for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_USER_OBJ_COUNT, parameters=dict(owner=schema))
         return int(cast(tuple, cur.fetchone())[0])
