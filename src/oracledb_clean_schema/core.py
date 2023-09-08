@@ -87,13 +87,15 @@ def purge_recycle_bin(schema: str, conn: Connection) -> None:
 
 
 def get_dbms_jobs(schema: str, conn: Connection) -> Iterator[SchemaObject]:
+    logger.debug("Fetching dbms jobs for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_JOBS, parameters=dict(owner=schema))
         for row in cur.fetchall():
-            yield SchemaObject(SchemaObjectType.DBMS_JOB, row[0], row[1])
+            yield SchemaObject(SchemaObjectType.DBMS_JOB, schema, row[0])
 
 
 def get_all_objects(schema: str, conn: Connection) -> Iterator[SchemaObject]:
+    logger.debug("Fetching objects for %s", schema)
     with conn.cursor() as cur:
         for kind in SchemaObjectType:
             cur.execute(
@@ -105,6 +107,7 @@ def get_all_objects(schema: str, conn: Connection) -> Iterator[SchemaObject]:
 
 
 def get_ref_constraints(schema: str, conn: Connection) -> Iterator[RefConstraintObject]:
+    logger.debug("Fetching referential constraints for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_REF_CONSTRAINTS, parameters=dict(owner=schema))
         for row in cur.fetchall():
@@ -114,6 +117,7 @@ def get_ref_constraints(schema: str, conn: Connection) -> Iterator[RefConstraint
 
 
 def get_db_credentials(schema: str, conn: Connection) -> Iterator[SchemaObject]:
+    logger.debug("Fetching dbms credentials for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_CREDS, parameters=dict(owner=schema))
         for row in cur.fetchall():
@@ -121,6 +125,7 @@ def get_db_credentials(schema: str, conn: Connection) -> Iterator[SchemaObject]:
 
 
 def get_object_count(schema: str, conn: Connection) -> int:
+    logger.debug("Fetching object count for %s", schema)
     with conn.cursor() as cur:
         cur.execute(constants.SQL_GET_USER_OBJ_COUNT, parameters=dict(owner=schema))
         return int(cast(tuple, cur.fetchone())[0])
@@ -247,7 +252,7 @@ def get_drop_sql(schema_obj: SchemaObject) -> str:
             if schema.casefold() == EXECUTING_USER.casefold():
                 return f"begin dbms_job.remove('{name}');"
             else:
-                return f"begin dbms_ijob.remove('{name}'); end;"
+                return f"begin sys.dbms_ijob.remove('{name}'); end;"
         case SchemaObject(SchemaObjectType.TABLE, schema, name):
             return f'drop table {schema}."{name}" cascade constraints purge'
         case SchemaObject(SchemaObjectType.VIEW, schema, name):

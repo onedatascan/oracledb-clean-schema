@@ -13,3 +13,22 @@ BEGIN
     comments        => 'This job does nothing');
 END;
 /
+
+
+DECLARE
+  jobno BINARY_INTEGER;
+BEGIN
+  SYS.DBMS_IJOB.SUBMIT(
+    job       => 9999999,
+    luser     => 'HR',
+    puser     => 'HR',
+    cuser     => 'HR',
+    what      =>'BEGIN null; END;',
+    next_date => sysdate + 1/24/60,
+    interval  => 'SYSDATE + 1',
+    broken    => false,
+    nlsenv    => '',
+    env       => ''
+  );
+END;
+/
